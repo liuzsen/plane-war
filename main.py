@@ -1,52 +1,56 @@
 import pygame
 import random
 
+# 初始化 Pygame
+pygame.init()
 
+# 设置游戏窗口
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 600
+window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+
+# 设置标题
+pygame.display.set_caption("飞机大战")
+
+# 设置背景颜色
+BLACK = (0, 0, 0)
+
+
+# 创建玩家飞机类
+class Player:
+    def __init__(self, image, x, y):
+        self.image = image
+        self.rect = image.get_rect()
+        self.rect.center = (x, y)
+        self.bullets = []  # 玩家的炮弹列表
+
+
+# 创建敌人飞机类
 class Enemy:
     def __init__(self, image, x, y, speed):
         self.image = image
         self.rect = image.get_rect()
         self.rect.center = (x, y)
         self.speed = speed
-        self.y = y  # 添加 y 属性
 
 
-# 初始化 Pygame
-pygame.init()
+# 创建炮弹类
+class Bullet:
+    def __init__(self, image, x, y):
+        self.image = image
+        self.rect = image.get_rect()
+        self.rect.center = (x, y)
 
-# 游戏窗口的宽度和高度
-WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 600
 
-# 颜色定义
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
+# 加载玩家飞机图片
+player_image = pygame.image.load("sources/player.png")
+player = Player(player_image, WINDOW_WIDTH / 2, WINDOW_HEIGHT - 50)
 
-# 创建游戏窗口
-window = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
-pygame.display.set_caption("飞机大战")
-
-# 加载玩家飞机图像
-try:
-    player_image = pygame.image.load("sources/smallfighter0001.png")
-    player_rect = player_image.get_rect()
-    player_rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT - 50)
-except pygame.error as e:
-    print("无法加载图像:", e)
-    pygame.quit()
-    exit()
-
-# 加载敌人飞机图像
-try:
-    enemy_image = pygame.image.load("sources/smallfighter0002.png")
-    enemy_rect = enemy_image.get_rect()
-except pygame.error as e:
-    print("无法加载图像:", e)
-    pygame.quit()
-    exit()
-
-# 创建敌人飞机列表
+# 加载敌人飞机图片
 enemies = []
+
+# 加载炮弹图片
+bullet_image = pygame.image.load("sources/bullet.png")
 
 # 游戏主循环
 running = True
@@ -54,60 +58,68 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:  # 玩家按空格键发射炮弹
+                bullet = Bullet(bullet_image, player.rect.centerx, player.rect.top)
+                player.bullets.append(bullet)
 
     # 移动玩家飞机
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT]:
-        player_rect.x -= 5
+        player.rect.x -= 5
     if keys[pygame.K_RIGHT]:
-        player_rect.x += 5
+        player.rect.x += 5
+
+    # 随机生成敌人
+    if random.random() < 0.01:  # 1% 的概率生成敌人
+        enemy_image = pygame.image.load("sources/smallfighter0002.png")
+        enemy_x = random.randint(0, WINDOW_WIDTH - enemy_image.get_width())
+        enemy_y = 0
+        enemy_speed = 2  # 固定速度
+        enemy = Enemy(enemy_image, enemy_x, enemy_y, enemy_speed)
+        enemies.append(enemy)
 
     # 移动敌人飞机
     for enemy in enemies:
-        # 使用 rect.y 来访问 y 坐标
         enemy.rect.y += enemy.speed
         if enemy.rect.y > WINDOW_HEIGHT:
-            enemy.rect.x = random.randint(0, WINDOW_WIDTH)
-            enemy.rect.y = 0
+            enemies.remove(enemy)
+        elif player.rect.colliderect(enemy.rect):  # 玩家与敌人碰撞
+            running = False
 
-    # 绘制背景
+    # 移动炮弹
+    for bullet in player.bullets:
+        bullet.rect.y -= 5
+        if bullet.rect.y < 0:
+            player.bullets.remove(bullet)
+
+    # 碰撞检测：炮弹与敌人
+    for bullet in player.bullets:
+        for enemy in enemies:
+            if bullet.rect.colliderect(enemy.rect):
+                enemies.remove(enemy)
+                player.bullets.remove(bullet)
+
+    # 清除屏幕
     window.fill(BLACK)
 
     # 绘制玩家飞机
-    window.blit(player_image, player_rect)
+    window.blit(player.image, player.rect)
 
     # 绘制敌人飞机
     for enemy in enemies:
-        window.blit(enemy_image, enemy.rect)
+        window.blit(enemy.image, enemy.rect)
 
-    pygame.display.update()
-    # 减慢敌人飞机的下落速度
-    if len(enemies) < 5:
-        new_enemy = Enemy(enemy_image, random.randint(0, WINDOW_WIDTH), 0, 1)
-        enemies.append(new_enemy)
-    # 增加一个事件循环，用于监听用户按键事件
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                # 当用户按下上键时，减慢敌人的速度
-                for enemy in enemies:
-                    enemy.speed -= 1
-            elif event.key == pygame.K_DOWN:
-                # 当用户按下下键时，加快敌人的速度
-                for enemy in enemies:
-                    enemy.speed += 1
+    # 绘制炮弹
+    for bullet in player.bullets:
+        window.blit(bullet.image, bullet.rect)
 
-    # 在屏幕左上角显示敌人的移动速度
-    # bug修复：添加了enemy变量的定义
-    # bug修复：添加了font变量的定义
-    font = pygame.font.Font(None, 36)
-    for enemy in enemies:
-        text = font.render(f"Enemy Speed: {enemy.speed}", True, WHITE)
-        window.blit(text, (10, 10))
+    # 更新游戏窗口
+    pygame.display.flip()
+    pygame.time.Clock().tick(60)
 
-    # 随机生成敌人
-    # bug修复：添加了敌人数量上限的控制
-    if len(enemies) < 5:
-        if random.randint(0, 100) < 5:
-            new_enemy = Enemy(enemy_image, random.randint(0, WINDOW_WIDTH), 0, 1)
-            enemies.append(new_enemy)
+# 游戏结束
+print("Game Over!")
+
+# 退出 Pygame
+pygame.quit()
