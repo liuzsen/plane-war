@@ -23,6 +23,7 @@ class Player:
         self.rect = image.get_rect()
         self.rect.center = (x, y)
         self.bullets = []  # 玩家的炮弹列表
+        self.score = 0  # 玩家的分数
 
 
 # 创建敌人飞机类
@@ -86,6 +87,7 @@ while running:
             enemies.remove(enemy)
         elif player.rect.colliderect(enemy.rect):  # 玩家与敌人碰撞
             running = False
+            player.score -= 100  # 扣除 100 分
 
     # 移动炮弹
     for bullet in player.bullets:
@@ -99,6 +101,13 @@ while running:
             if bullet.rect.colliderect(enemy.rect):
                 enemies.remove(enemy)
                 player.bullets.remove(bullet)
+                player.score += 100  # 增加 100 分
+
+    # 绘制分数
+    score_text = pygame.font.SysFont("Arial", 24).render(
+        "Score: " + str(player.score), True, (255, 255, 255)
+    )
+    window.blit(score_text, (10, 10))
 
     # 清除屏幕
     window.fill(BLACK)
@@ -114,9 +123,16 @@ while running:
     for bullet in player.bullets:
         window.blit(bullet.image, bullet.rect)
 
+    # 绘制分数
+    score_text = pygame.font.SysFont("Arial", 24).render(
+        "Score: " + str(player.score), True, (255, 255, 255)
+    )
+    window.blit(score_text, (10, 10))
+
     # 更新游戏窗口
     pygame.display.flip()
     pygame.time.Clock().tick(60)
+
 
 # 游戏结束
 print("Game Over!")
